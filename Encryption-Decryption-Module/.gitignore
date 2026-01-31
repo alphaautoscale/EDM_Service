@@ -1,0 +1,22 @@
+# --- IDE 설정 파일 (이클립스/VS Code 등) ---
+.classpath
+.project
+.settings/
+.metadata/
+bin/
+
+# --- 테스트용 데이터 및 경로 (중요!) ---
+# 지민님이 StartBatch에서 테스트했던 로컬 경로의 파일들입니다.
+# 실제 암호화된 데이터나 개인적인 테스트 파일은 올리지 않는 게 좋습니다.
+*.enc
+*.dec
+*.properties
+/암호화 테스트/
+
+# --- OS 및 시스템 파일 ---
+Thumbs.db
+.DS_Store
+
+# --- 로그 및 임시 파일 ---
+*.log
+temp/

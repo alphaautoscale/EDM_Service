@@ -1,0 +1,101 @@
+package util.Encrypt;
+
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.Base64;
+
+import javax.crypto.Cipher;
+import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
+
+import config.ConfReader;
+
+/**
+ * AES-256 복호화 유틸리티 클래스
+ */
+public class Decrypt {
+
+	private static final String FIXED_KEY = ConfReader.getKey("FIXED_KEY");
+
+	/**
+	 * 데이터 복호화
+	 * 
+	 * @param encryptedText Base64로 인코딩된 암호화된 데이터
+	 * @param key           Base64로 인코딩된 키
+	 * @return 복호화된 평문
+	 */
+	public static String decrypt(String encryptedText, String key) throws Exception {
+		// 키 디코딩
+		byte[] keyBytes = Base64.getDecoder().decode(key);
+		SecretKeySpec secretKeySpec = new SecretKeySpec(keyBytes, Encrypt.ALGORITHM);
+
+		// 암호화된 데이터 디코딩
+		byte[] encryptedWithIv = Base64.getDecoder().decode(encryptedText);
+
+		// IV와 암호문 분리
+		byte[] iv = new byte[Encrypt.IV_LENGTH];
+		byte[] encryptedBytes = new byte[encryptedWithIv.length - Encrypt.IV_LENGTH];
+		System.arraycopy(encryptedWithIv, 0, iv, 0, Encrypt.IV_LENGTH);
+		System.arraycopy(encryptedWithIv, Encrypt.IV_LENGTH, encryptedBytes, 0, encryptedBytes.length);
+
+		IvParameterSpec ivParameterSpec = new IvParameterSpec(iv);
+
+		// 복호화
+		Cipher cipher = Cipher.getInstance(Encrypt.TRANSFORMATION);
+		cipher.init(Cipher.DECRYPT_MODE, secretKeySpec, ivParameterSpec);
+		byte[] decryptedBytes = cipher.doFinal(encryptedBytes);
+
+		return new String(decryptedBytes, StandardCharsets.UTF_8);
+	}
+
+	/**
+	 * 파일 복호화
+	 * 
+	 * @param inputFilePath  복호화할 암호화된 파일 경로
+	 * @param outputFilePath 복호화된 파일을 저장할 경로
+	 * @param key            Base64로 인코딩된 키
+	 */
+	public static void decryptFile(String srcFile, String outputFilePath) throws Exception {
+
+		// 암호화된 파일 읽기
+		byte[] encryptedData = Files.readAllBytes(Paths.get(srcFile));
+
+		// 복호화
+		byte[] decryptedData = decryptBytes(encryptedData);
+
+		// 복호화된 데이터를 파일로 저장
+		Files.write(Paths.get(outputFilePath), decryptedData);
+
+		System.out.println("File Decrpyt Success: " + srcFile + " -> " + outputFilePath);
+	}
+
+	/**
+	 * 바이트 배열 복호화 (파일용)
+	 * 
+	 * @param encryptedData 암호화된 바이트 배열 (IV + 암호문)
+	 * @param key           Base64로 인코딩된 키
+	 * @return 복호화된 바이트 배열
+	 */
+	public static byte[] decryptBytes(byte[] encryptedData) throws Exception {
+		// 키 디코딩
+		byte[] keyBytes = Base64.getDecoder().decode(FIXED_KEY);
+		SecretKeySpec secretKeySpec = new SecretKeySpec(keyBytes, Encrypt.ALGORITHM);
+
+		// IV와 암호문 분리
+		byte[] iv = new byte[Encrypt.IV_LENGTH];
+		System.arraycopy(encryptedData, 0, iv, 0, Encrypt.IV_LENGTH);
+		IvParameterSpec ivParameterSpec = new IvParameterSpec(iv);
+
+		// 3. 뒤의 나머지(진짜 암호문) 떼어내기
+		int cipherTextLength = encryptedData.length - 16;
+		byte[] cipherText = new byte[cipherTextLength];
+		System.arraycopy(encryptedData, 16, cipherText, 0, cipherTextLength);
+
+		// 4. 복호화 실행
+		Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+		cipher.init(Cipher.DECRYPT_MODE, secretKeySpec, ivParameterSpec);
+
+		return cipher.doFinal(cipherText);
+	}
+}
