@@ -83,13 +83,13 @@ public class Decrypt {
 		int sigLen = sigBytes.length;
 		int ivLen = Encrypt.IV_LENGTH;
 
-		// 1. 키 준비 (지민님 원본 로직)
+		// 1. 키 준비 
 		byte[] keyBytes = Base64.getDecoder().decode(FIXED_KEY);
 		SecretKeySpec secretKeySpec = new SecretKeySpec(keyBytes, Encrypt.ALGORITHM);
 
 		// 2. IV 떼어내기 (서명 바로 뒤부터 16바이트)
 		byte[] iv = new byte[ivLen];
-		// 위치 설명: encryptedData의 'sigLen' 번 위치부터 'ivLen'만큼 복사해서 'iv' 배열에 담아라!
+		
 		System.arraycopy(encryptedData, sigLen, iv, 0, ivLen);
 		IvParameterSpec ivParameterSpec = new IvParameterSpec(iv);
 
