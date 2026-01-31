@@ -78,22 +78,30 @@ public class Decrypt {
 	 * @return 복호화된 바이트 배열
 	 */
 	public static byte[] decryptBytes(byte[] encryptedData) throws Exception {
-		// 키 디코딩
+
+		byte[] sigBytes = Encrypt.SIGNATURE.getBytes(StandardCharsets.UTF_8);
+		int sigLen = sigBytes.length;
+		int ivLen = Encrypt.IV_LENGTH;
+
+		// 1. 키 준비 (지민님 원본 로직)
 		byte[] keyBytes = Base64.getDecoder().decode(FIXED_KEY);
 		SecretKeySpec secretKeySpec = new SecretKeySpec(keyBytes, Encrypt.ALGORITHM);
 
-		// IV와 암호문 분리
-		byte[] iv = new byte[Encrypt.IV_LENGTH];
-		System.arraycopy(encryptedData, 0, iv, 0, Encrypt.IV_LENGTH);
+		// 2. IV 떼어내기 (서명 바로 뒤부터 16바이트)
+		byte[] iv = new byte[ivLen];
+		// 위치 설명: encryptedData의 'sigLen' 번 위치부터 'ivLen'만큼 복사해서 'iv' 배열에 담아라!
+		System.arraycopy(encryptedData, sigLen, iv, 0, ivLen);
 		IvParameterSpec ivParameterSpec = new IvParameterSpec(iv);
 
-		// 3. 뒤의 나머지(진짜 암호문) 떼어내기
-		int cipherTextLength = encryptedData.length - 16;
+		// 3. 진짜 암호문 떼어내기 (서명 + IV 이후부터 끝까지)
+		int cipherTextStart = sigLen + ivLen; // 암호문이 시작되는 지점
+		int cipherTextLength = encryptedData.length - cipherTextStart; // 전체 길이에서 앞부분 뺀 길이
+
 		byte[] cipherText = new byte[cipherTextLength];
-		System.arraycopy(encryptedData, 16, cipherText, 0, cipherTextLength);
+		System.arraycopy(encryptedData, cipherTextStart, cipherText, 0, cipherTextLength);
 
 		// 4. 복호화 실행
-		Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+		Cipher cipher = Cipher.getInstance(Encrypt.TRANSFORMATION);
 		cipher.init(Cipher.DECRYPT_MODE, secretKeySpec, ivParameterSpec);
 
 		return cipher.doFinal(cipherText);

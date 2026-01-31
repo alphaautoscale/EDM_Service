@@ -21,6 +21,7 @@ public class Encrypt {
 	static final String ALGORITHM = ConfReader.getKey("ALGORITHM");
 	static final String TRANSFORMATION = ConfReader.getKey("TRANSFORMATION");
 	static final int IV_LENGTH = Integer.parseInt(ConfReader.getKey("IV_LENGTH"));
+	static final String SIGNATURE = ConfReader.getKey("SIGNATURE");
 
 	/**
 	 * 랜덤 IV(Initialization Vector) 생성
@@ -74,6 +75,9 @@ public class Encrypt {
 	 * @return 암호화된 바이트 배열 (IV + 암호문)
 	 */
 	public static byte[] encryptBytes(byte[] data, String key) throws Exception {
+		
+		byte[] sigBytes = SIGNATURE.getBytes(StandardCharsets.UTF_8);
+		
 		// 키 디코딩
 		byte[] keyBytes = Base64.getDecoder().decode(key);
 		SecretKeySpec secretKeySpec = new SecretKeySpec(keyBytes, ALGORITHM);
@@ -86,13 +90,14 @@ public class Encrypt {
 		Cipher cipher = Cipher.getInstance(TRANSFORMATION);
 		cipher.init(Cipher.ENCRYPT_MODE, secretKeySpec, ivParameterSpec);
 		byte[] encryptedBytes = cipher.doFinal(data);
+		
+		byte[] totalPackage = new byte[sigBytes.length + IV_LENGTH + encryptedBytes.length];
+	    System.arraycopy(sigBytes, 0, totalPackage, 0, sigBytes.length);
+	    System.arraycopy(iv, 0, totalPackage, sigBytes.length, IV_LENGTH);
+	    System.arraycopy(encryptedBytes, 0, totalPackage, sigBytes.length + IV_LENGTH, encryptedBytes.length);
 
-		// IV + 암호문을 합치기
-		byte[] encryptedWithIv = new byte[IV_LENGTH + encryptedBytes.length];
-		System.arraycopy(iv, 0, encryptedWithIv, 0, IV_LENGTH);
-		System.arraycopy(encryptedBytes, 0, encryptedWithIv, IV_LENGTH, encryptedBytes.length);
 
-		return encryptedWithIv;
+		return totalPackage;
 	}
 
 	/**
